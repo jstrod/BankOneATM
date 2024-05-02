@@ -4,9 +4,14 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Scanner;
 
 
 public class ATMSystem extends JFrame implements ATMSystemInfo {
@@ -146,63 +151,67 @@ public class ATMSystem extends JFrame implements ATMSystemInfo {
     }
 
     private void createTransactionPanel() {
-        transactionPanel = new JPanel(new BorderLayout());
-        JPanel inputPanel = new JPanel();
-        GroupLayout layout = new GroupLayout(inputPanel);
-        inputPanel.setLayout(layout);
-        layout.setAutoCreateGaps(true);
-        layout.setAutoCreateContainerGaps(true);
-        JLabel depositLabel = new JLabel("Deposit Amount:");
-        JLabel withdrawLabel = new JLabel("Withdraw Amount:");
-        depositField = new JTextField();
-        withdrawField = new JTextField();
-        depositButton = new JButton("Deposit");
-        depositButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                deposit();
-            }
-        });
-        withdrawButton = new JButton("Withdraw");
-        withdrawButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                withdraw();
-            }
-        });
+    transactionPanel = new JPanel(new BorderLayout());
+    JPanel inputPanel = new JPanel();
+    GroupLayout layout = new GroupLayout(inputPanel);
+    inputPanel.setLayout(layout);
+    layout.setAutoCreateGaps(true);
+    layout.setAutoCreateContainerGaps(true);
+    JLabel depositLabel = new JLabel("Deposit Amount:");
+    JLabel withdrawLabel = new JLabel("Withdraw Amount:");
+    depositField = new JTextField();
+    withdrawField = new JTextField();
+    depositButton = new JButton("Deposit");
+    depositButton.addActionListener(e -> deposit());
+    withdrawButton = new JButton("Withdraw");
+    withdrawButton.addActionListener(e -> withdraw());
 
-        viewBalanceButton = new JButton("View Balance");
-        viewBalanceButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                viewBalance();
-            }
-        });
+    viewBalanceButton = new JButton("View Balance");
+    viewBalanceButton.addActionListener(e -> viewBalance());
 
-        //transaction panel GUI
-        layout.setHorizontalGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addComponent(depositLabel)
-                        .addComponent(withdrawLabel))
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addComponent(depositField)
-                        .addComponent(withdrawField))
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
-                        .addComponent(depositButton)
-                        .addComponent(withdrawButton)
-                        .addComponent(viewBalanceButton)));
-        layout.setVerticalGroup(layout.createSequentialGroup()
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                        .addComponent(depositLabel)
-                        .addComponent(depositField)
-                        .addComponent(depositButton))
-                .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
-                        .addComponent(withdrawLabel)
-                        .addComponent(withdrawField)
-                        .addComponent(withdrawButton))
-                .addComponent(viewBalanceButton));
-        transactionPanel.add(inputPanel, BorderLayout.CENTER);
+    JButton logoutButton = new JButton("Logout");
+    logoutButton.addActionListener(new ActionListener() {
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        // Switch back to the cardInsertPanel when logout button is clicked
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        cardLayout.show(mainPanel, "cardInsertPanel");
+        
+        // Clear the PIN field
+        pinField.setText("");
     }
+});
+
+    
+    //transaction panel GUI
+    layout.setHorizontalGroup(layout.createSequentialGroup()
+            .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addComponent(depositLabel)
+                    .addComponent(withdrawLabel))
+            .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addComponent(depositField)
+                    .addComponent(withdrawField))
+            .addGroup(layout.createParallelGroup(GroupLayout.Alignment.LEADING)
+                    .addComponent(depositButton)
+                    .addComponent(withdrawButton)
+                    .addComponent(viewBalanceButton)
+                    .addComponent(logoutButton))); // Add logout button to layout
+
+    layout.setVerticalGroup(layout.createSequentialGroup()
+            .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                    .addComponent(depositLabel)
+                    .addComponent(depositField)
+                    .addComponent(depositButton))
+            .addGroup(layout.createParallelGroup(GroupLayout.Alignment.BASELINE)
+                    .addComponent(withdrawLabel)
+                    .addComponent(withdrawField)
+                    .addComponent(withdrawButton))
+            .addComponent(viewBalanceButton)
+            .addComponent(logoutButton)); // Add logout button to layout
+
+    transactionPanel.add(inputPanel, BorderLayout.CENTER);
+}
+
 
     private void registerUser() {
         String pinText = pinField.getText();
@@ -217,12 +226,7 @@ public class ATMSystem extends JFrame implements ATMSystemInfo {
         return;
     }
     int pin = Integer.parseInt(pinText);
-    // Check if PIN is unique
-    if (pins.contains(pin)) {
-        JOptionPane.showMessageDialog(this, "PIN already registered.");
-        return;
-    }
-
+    
     // Add the PIN to the list of registered PINs
     pins.add(pin);
 
@@ -248,8 +252,40 @@ public class ATMSystem extends JFrame implements ATMSystemInfo {
     cardLayout.show(mainPanel, "transactionPanel");
 
     // Displays the initial balance of the user
-    JOptionPane.showMessageDialog(this, "Welcome " + newUser.getName() + ". Your current balance is: " + newUser.getBalance());
+    JOptionPane.showMessageDialog(this, "Welcome " + newUser.getName());
 }
+    
+    // Store user balances to a file
+private void storeUserBalancesToFile() {
+    try (FileWriter writer = new FileWriter("user_balances.txt")) {
+        for (Map.Entry<Integer, Integer> entry : userBalances.entrySet()) {
+            writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+// Load user balances from a file
+private void loadUserBalancesFromFile() {
+    try (Scanner scanner = new Scanner(new File("user_balances.txt"))) {
+        while (scanner.hasNextLine()) {
+            String[] parts = scanner.nextLine().split(",");
+            int pin = Integer.parseInt(parts[0]);
+            int balance = Integer.parseInt(parts[1]);
+            userBalances.put(pin, balance);
+        }
+    } catch (FileNotFoundException e) {
+        // Handle file not found
+    }
+}
+
+// Update user balance in memory and save to file
+private void updateUserBalance(int pin, int newBalance) {
+    userBalances.put(pin, newBalance);
+    storeUserBalancesToFile();
+}
+
     private void deposit() {
     String userPIN = pinField.getText();
     String depositAmountText = depositField.getText();
@@ -338,4 +374,3 @@ public class ATMSystem extends JFrame implements ATMSystemInfo {
     }
 }
 }
-
