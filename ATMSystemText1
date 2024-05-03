@@ -1,0 +1,416 @@
+package atmsystem;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class ATMSystem extends JFrame implements ATMSystemInfo {
+    private ArrayList<Integer> pins = new ArrayList<>();
+    private ArrayList<Integer> deposits = new ArrayList<>();
+    private ArrayList<Integer> withdrawals = new ArrayList<>();
+    private ArrayList<User> users = new ArrayList<>(); // Define users ArrayList at the class level
+
+    private JTextField pinField;
+    private JTextField depositField;
+    private JTextField withdrawField;
+
+    private JPanel mainPanel;
+    private JPanel transactionPanel;
+
+    private JButton withdrawButton;
+    private JButton viewBalanceButton;
+    private JButton depositButton;
+
+    private ArrayList<String> currentSessionTransactions = new ArrayList<>(); // Track transactions for the current session
+
+    @Override
+    public void startATM() {}
+
+    public ATMSystem() {
+        setTitle("ATM System");
+        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setSize(400, 300);
+        setLocationRelativeTo(null);
+        mainPanel = new JPanel(new CardLayout());
+        JPanel cardInsertPanel = createCardInsertPanel();
+        mainPanel.add(cardInsertPanel, "cardInsertPanel");
+
+        JPanel registerPanel = createRegisterPanel();
+        mainPanel.add(registerPanel, "registerPanel");
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        cardLayout.show(mainPanel, "cardInsertPanel");
+        add(mainPanel);
+        setVisible(true);
+        initializeUsers();
+    }
+
+    private Map<Integer, Integer> userBalances = new HashMap<>();
+
+    private void initializeUsers() {
+        // Add pre-made users with PINs and initial balances
+        users.add(new User("Alice", 1234, 1000));
+        users.add(new User("Bob", 5678, 9999));
+        users.add(new User("Nick", 1111, 1));
+    // Add more users as needed here **********
+
+        // Initialize balances for each user
+        for (User user : users) {
+            userBalances.put(user.getPin(), user.getBalance());
+        }
+    }
+
+    private JPanel createCardInsertPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        Color lightBlue = new Color(173, 216, 230);
+        panel.setBackground(lightBlue);
+
+        // Load the image
+        ImageIcon icon = new ImageIcon("C:\\Users\\30nic\\Downloads\\7bank1.jpg");
+        Image image = icon.getImage(); // Get the image from the ImageIcon
+        // Scale the image to a desired width and height
+        Image scaledImage = image.getScaledInstance(150, 150, Image.SCALE_SMOOTH);
+        // Create a new ImageIcon with the scaled image
+        ImageIcon scaledIcon = new ImageIcon(scaledImage);
+        JLabel imageLabel = new JLabel(scaledIcon);
+        panel.add(imageLabel, new GridBagConstraints());
+
+        // Create a centered heading label
+        JLabel headingLabel = new JLabel("Welcome to Team 7 Bank");
+        headingLabel.setFont(new Font("Arial", Font.BOLD, 20)); // Set font size and style
+        headingLabel.setHorizontalAlignment(SwingConstants.CENTER); // Align text to center
+        GridBagConstraints gbcHeading = new GridBagConstraints();
+        gbcHeading.gridx = 0;
+        gbcHeading.gridy = 1;
+        gbcHeading.gridwidth = GridBagConstraints.REMAINDER; // Span across all columns
+        gbcHeading.insets = new Insets(10, 10, 10, 10); // Add some padding
+        panel.add(headingLabel, gbcHeading);
+
+        // Add button
+        GridBagConstraints gbcButton = new GridBagConstraints();
+        gbcButton.gridx = 0;
+        gbcButton.gridy = 2;
+        gbcButton.insets = new Insets(10, 10, 10, 10);
+        JButton insertCardButton = new JButton("Click here to insert card");
+        insertCardButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Switch to the register panel when the button is clicked
+                CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+                cardLayout.show(mainPanel, "registerPanel");
+            }
+        });
+        insertCardButton.setBackground(Color.WHITE); // Set button background color to white
+        panel.add(insertCardButton, gbcButton);
+
+        return panel;
+    }
+
+
+    private JPanel createRegisterPanel() {
+        JPanel panel = new JPanel(new BorderLayout()); // Use BorderLayout for better control
+        JPanel inputPanel = new JPanel(new GridBagLayout()); // Use GridBagLayout for flexible positioning
+        Color lightBlue = new Color(173, 216, 230);
+        inputPanel.setBackground(lightBlue);// Set background color for input panel
+
+        // Create and configure pinLabel
+        JLabel pinLabel = new JLabel("PIN:");
+        pinLabel.setFont(new Font("Arial", Font.BOLD, 20)); // Set font size and style
+        pinLabel.setHorizontalAlignment(JLabel.CENTER); // Center align the label text
+
+        // Create and configure pinField
+        pinField = new JTextField(4);
+        pinField.setHorizontalAlignment(JTextField.CENTER); // Center align the text field contents
+
+        // Create and configure registerButton
+        JButton registerButton = new JButton("Login");
+        registerButton.setBackground(Color.WHITE);
+        registerButton.addActionListener(e -> registerUser());
+
+        // Add components to inputPanel with GridBagConstraints
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.insets = new Insets(5, 5, 5, 5); // Add some padding
+
+        // Add pinLabel and pinField on the same line
+        inputPanel.add(pinLabel, gbc);
+        gbc.gridx++;
+        inputPanel.add(pinField, gbc);
+
+        // Move to the next row for the registerButton
+        gbc.gridx = 0;
+        gbc.gridy++;
+        gbc.gridwidth = 2; // Span across both columns
+        gbc.anchor = GridBagConstraints.CENTER; // Center align the button
+        inputPanel.add(registerButton, gbc);
+
+        panel.add(inputPanel, BorderLayout.CENTER); // Add input panel to center of register panel
+        return panel;
+    }
+
+    private void createTransactionPanel() {
+    transactionPanel = new JPanel();
+    transactionPanel.setLayout(new BorderLayout());
+
+    JPanel inputPanel = new JPanel(new GridBagLayout());
+    Color lightBlue = new Color(173, 216, 230);
+    inputPanel.setBackground(lightBlue);
+
+    GridBagConstraints gbc = new GridBagConstraints();
+    gbc.gridx = 0;
+    gbc.gridy = 0;
+    gbc.fill = GridBagConstraints.HORIZONTAL;
+    gbc.insets = new Insets(5, 5, 5, 5);
+
+    JLabel depositLabel = new JLabel("Deposit Amount:");
+    JLabel withdrawLabel = new JLabel("Withdraw Amount:");
+    depositField = new JTextField(10);
+    withdrawField = new JTextField(10);
+    depositButton = new JButton("Deposit");
+    depositButton.setBackground(Color.WHITE);
+    depositButton.addActionListener(e -> deposit());
+    withdrawButton = new JButton("Withdraw");
+    withdrawButton.setBackground(Color.WHITE);
+    withdrawButton.addActionListener(e -> withdraw());
+
+    viewBalanceButton = new JButton("View Balance");
+    viewBalanceButton.setBackground(Color.WHITE);
+    viewBalanceButton.addActionListener(e -> viewBalance());
+
+    JButton printReceiptButton = new JButton("Print Receipt");
+    printReceiptButton.setBackground(Color.WHITE);
+    printReceiptButton.addActionListener(e -> printReceipt());
+
+    JButton logoutButton = new JButton("Logout");
+    logoutButton.setBackground(Color.RED);
+    logoutButton.addActionListener(e -> {
+        // Switch back to the cardInsertPanel when logout button is clicked
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        cardLayout.show(mainPanel, "cardInsertPanel");
+        // Reset pinField
+        pinField.setText("");
+    });
+
+    // Add components to inputPanel
+    inputPanel.add(depositLabel, gbc);
+    gbc.gridx++;
+    inputPanel.add(depositField, gbc);
+    gbc.gridx++;
+    inputPanel.add(depositButton, gbc);
+
+    gbc.gridx = 0;
+    gbc.gridy++;
+    inputPanel.add(withdrawLabel, gbc);
+    gbc.gridx++;
+    inputPanel.add(withdrawField, gbc);
+    gbc.gridx++;
+    inputPanel.add(withdrawButton, gbc);
+
+    gbc.gridx = 0;
+    gbc.gridy++;
+    gbc.gridwidth = 3;
+    inputPanel.add(viewBalanceButton, gbc);
+    gbc.gridy++;
+    inputPanel.add(printReceiptButton, gbc);
+    gbc.gridy++;
+    inputPanel.add(logoutButton, gbc);
+
+    transactionPanel.add(inputPanel, BorderLayout.CENTER);
+}
+
+    
+    private void registerUser() {
+        String pinText = pinField.getText();
+    // Check if the PIN field is empty
+    if (pinText.isEmpty()) {
+        JOptionPane.showMessageDialog(this, "Please enter your PIN.");
+        return;
+    }
+    // Check if the PIN is a four-digit number
+    if (!pinText.matches("\\d{4}")) {
+        JOptionPane.showMessageDialog(this, "PIN must be a four-digit number.");
+        return;
+    }
+    int pin = Integer.parseInt(pinText);
+    
+    // Add the PIN to the list of registered PINs
+    pins.add(pin);
+
+    // Find the user object with the entered PIN
+    User newUser = null;
+    for (User user : users) {
+        if (user.getPin() == pin) {
+            newUser = user;
+            break;
+        }
+    }
+
+    // Check if the user exists
+    if (newUser == null) {
+        JOptionPane.showMessageDialog(this, "User not found.");
+        return;
+    }
+
+        // Create the transaction panel after successful registration
+        createTransactionPanel();
+        mainPanel.add(transactionPanel, "transactionPanel");
+        CardLayout cardLayout = (CardLayout) mainPanel.getLayout();
+        cardLayout.show(mainPanel, "transactionPanel");
+
+        // Displays the initial balance of the user
+    JOptionPane.showMessageDialog(this, "Welcome " + newUser.getName());
+}
+    
+    // Store user balances to a file
+private void storeUserBalancesToFile() {
+    try (FileWriter writer = new FileWriter("user_balances.txt")) {
+        for (Map.Entry<Integer, Integer> entry : userBalances.entrySet()) {
+            writer.write(entry.getKey() + "," + entry.getValue() + "\n");
+        }
+    } catch (IOException e) {
+        e.printStackTrace();
+    }
+}
+
+// Load user balances from a file
+private void loadUserBalancesFromFile() {
+    try (Scanner scanner = new Scanner(new File("user_balances.txt"))) {
+        while (scanner.hasNextLine()) {
+            String[] parts = scanner.nextLine().split(",");
+            int pin = Integer.parseInt(parts[0]);
+            int balance = Integer.parseInt(parts[1]);
+            userBalances.put(pin, balance);
+        }
+    } catch (FileNotFoundException e) {
+        // Handle file not found
+    }
+}
+
+    // Update user balance in memory and save to file
+    private void updateUserBalance(int pin, int newBalance) {
+    userBalances.put(pin, newBalance);
+    storeUserBalancesToFile();
+}
+    private void deposit() {
+    String userPIN = pinField.getText();
+    String depositAmountText = depositField.getText();
+
+    int depositAmount;
+    try {
+        depositAmount = Integer.parseInt(depositAmountText);
+    } catch (NumberFormatException e) {
+        JOptionPane.showMessageDialog(this, "Invalid deposit amount.");
+        return;
+    }
+
+    int currentBalance = userBalances.getOrDefault(Integer.parseInt(userPIN), 0);
+    currentBalance += depositAmount;
+    userBalances.put(Integer.parseInt(userPIN), currentBalance);
+
+    // Display the updated balance
+    JOptionPane.showMessageDialog(this, "Deposit successful. Your current balance is: " + currentBalance);
+    // Reset deposit field
+    depositField.setText("");
+}
+
+    private void withdraw() {
+        String userPIN = pinField.getText();
+        String withdrawAmountText = withdrawField.getText();
+
+        int withdrawAmount;
+        try {
+            withdrawAmount = Integer.parseInt(withdrawAmountText);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Invalid withdrawal amount.");
+            return;
+        }
+
+        int currentBalance = userBalances.getOrDefault(Integer.parseInt(userPIN), 0);
+        if (withdrawAmount > currentBalance) {
+            JOptionPane.showMessageDialog(this, "Insufficient funds.");
+            return;
+        }
+
+        currentBalance -= withdrawAmount;
+        userBalances.put(Integer.parseInt(userPIN), currentBalance);
+
+        // Add withdrawal transaction to current session transactions
+        currentSessionTransactions.add("Withdraw: " + withdrawAmount + " New Balance: " + currentBalance);
+
+        // Display the updated balance
+        JOptionPane.showMessageDialog(this, "Withdrawal successful. Your current balance is: " + currentBalance);
+        // Reset withdraw field
+        withdrawField.setText("");
+    }
+
+    private void viewBalance() {
+        String userPIN = pinField.getText();
+        int currentBalance = userBalances.getOrDefault(Integer.parseInt(userPIN), 0);
+        // Display the current balance
+        JOptionPane.showMessageDialog(this, "Your current balance is: " + currentBalance);
+    }
+
+    private void printReceipt() {
+        StringBuilder receipt = new StringBuilder();
+        String userPIN = pinField.getText();
+        User user = null;
+        for (User u : users) {
+            if (u.getPin() == Integer.parseInt(userPIN)) {
+                user = u;
+                break;
+            }
+        }
+        if (user != null) {
+            receipt.append(user.getName()).append("'s Receipt \n \n");
+            int initialBalance = userBalances.getOrDefault(Integer.parseInt(userPIN), 0);
+            receipt.append("Initial Balance: ").append(initialBalance).append("\n");
+            for (String transaction : currentSessionTransactions) {
+                receipt.append(transaction).append("\n");
+            }
+            receipt.append("Final Balance: ").append(userBalances.get(Integer.parseInt(userPIN))).append("\n");
+            receipt.append("Have a Great Day!");
+            JOptionPane.showMessageDialog(this, receipt.toString());
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            public void run() {
+                new ATMSystem();
+            }
+        });
+    }
+
+    class User {
+        private String name;
+        private int pin;
+        private int balance;
+
+        public User(String name, int pin, int balance) {
+            this.name = name;
+            this.pin = pin;
+            this.balance = balance;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public int getBalance() {
+            return balance;
+        }
+
+        public int getPin() {
+            return pin;
+        }
+    }
+}
