@@ -21,11 +21,9 @@ ReadMe Files one, two, and three
 Original Video Demonstration of Bank One’s ATM
 
 Updated/Finalized Video Demonstration of Bank One’s ATM
-![image](https://github.com/jstrod/BankOneATM/assets/147212788/043d8f46-93f6-4d69-a2b3-2ac695fc7878)
 
-
-
-
+/////////////////////////////////////////////////////////////////////
+Older TOC.
 
 Table of Contents:
 
